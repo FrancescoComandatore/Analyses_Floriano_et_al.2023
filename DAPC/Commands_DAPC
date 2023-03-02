@@ -1,0 +1,92 @@
+
+################
+# DAPC ANALYSIS
+################
+
+R
+
+library(ade4)
+library(adegenet)
+
+#########################
+# Load and format inputs
+#########################
+
+# Load Orthologue presence/absence table
+tab<-read.delim("OrthoMCL_PA.tab")
+
+# Load the classification table
+class<-read.delim("Tropisms.tab")
+
+# Format inputs
+
+tab2<-tab[,as.matrix(class$Strain)]
+tab2[tab2>0]<-1
+row.names(tab2)<-tab$Cluster
+
+# Remove outgroups
+
+outgroup = c("Csegnis","Rcapsulatus","Rrubrum","Swittichii")
+
+tab3 = tab2[,as.matrix(setdiff(colnames(tab2), outgroup))]
+class2 = class[class$Strain %in% as.matrix(setdiff(colnames(tab2), outgroup)),]
+
+snps2<-t(tab3)
+
+row.names(class2)<-class2$Strain
+phen2<-class2[as.matrix(row.names(snps2)),"Tropism"]
+
+######
+# PCA
+######
+
+pca <- dudi.pca(snps2, scale=FALSE)
+
+summary(pca)
+Class: pca dudi
+Call: dudi.pca(df = snps2, scale = FALSE)
+
+Class: pca dudi
+Call: dudi.pca(df = snps2, scale = FALSE)
+
+Total inertia: 351.6
+
+Eigenvalues:
+    Ax1     Ax2     Ax3     Ax4     Ax5 
+  91.70   43.75   28.29   22.05   15.08 
+
+Projected inertia (%):
+    Ax1     Ax2     Ax3     Ax4     Ax5 
+ 26.078  12.442   8.045   6.271   4.290 
+
+Cumulative projected inertia (%):
+    Ax1   Ax1:2   Ax1:3   Ax1:4   Ax1:5 
+  26.08   38.52   46.57   52.84   57.13 
+
+(Only 5 dimensions (out of 42) are shown)
+
+
+pdf("FigureS2.pdf")
+s.class(pca$li, fac=phen2, col=transp(c("royalblue","red","gray30")), cpoint=2, sub="PCA - axes 1 (26.1%) and 2 (12.4%)", clabel=0.0000001)
+legend(-16, -10, legend=c("Intramitochondrial","Not Intramitochondrial", "Unknown"), fill=c("royalblue","red","gray30"), cex=1, bty="n")
+dev.off()
+
+#######
+# DAPC
+#######
+
+# remove unknown
+
+rem_org<-row.names(class2[class2$Tropism == "Unknown",])
+
+snps3<-snps2[as.matrix(setdiff(row.names(snps2),rem_org)),]
+class3<-droplevels(class2[as.matrix(setdiff(row.names(class2),rem_org)),])
+
+phen3<-class3[as.matrix(row.names(snps3)),"Tropism"]
+
+dapc <- dapc(snps3, phen3)
+
+sel.snps<-loadingplot(dapc$var.contr, threshold=0.006)
+
+write.table(as.matrix(sel.snps$var.values), file="DAPC_selected_genes.list", sep="\t", quote=F)
+

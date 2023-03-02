@@ -1,0 +1,3 @@
+
+perl PARALLELIZE_Infer_ancestral_state_changes.pl -tab OrthoMCL_PA.tab -tree Rooted_phylogenetic_tree.nwk -cpu 70 -p 0.7
+
